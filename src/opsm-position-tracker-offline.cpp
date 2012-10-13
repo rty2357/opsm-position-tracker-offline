@@ -22,7 +22,7 @@
 #include "gnd-matrix-base.hpp"
 
 #include "gnd-observation-probability.hpp"
-#include "gnd-odometry-rse-map.hpp"
+#include "gnd-odometry-correction.hpp"
 #include "gnd-cui.hpp"
 #include "gnd-gridmap.hpp"
 #include "gnd-shutoff.hpp"
@@ -57,7 +57,6 @@ int main(int argc, char* argv[]) {
 	ssm::ScanPoint2D			sokuikiraw;
 	ssm::ScanPoint2DProperty	sokuikiraw_prop;
 	SSMLog<Spur_Odometry>		ssmlog_odm;			// odometry position streaming data
-//	SSMLog<Spur_Odometry>		ssmlog_pos;			// tracking result position streaming data
 
 	gnd::matrix::coord_tree coordtree;			// coordinate tree
 	int coordid_gl = -1,						// global coordinate node id
@@ -67,7 +66,7 @@ int main(int argc, char* argv[]) {
 
 	gnd::cui gcui;								// cui class
 
-	gnd::rse_map emap;
+	gnd::odometry::cmap cmap;
 
 	OPSMPosTrack::proc_configuration param;	// configuration parameter
 	OPSMPosTrack::options proc_opt(&param);		// process option analyze class
@@ -329,7 +328,7 @@ int main(int argc, char* argv[]) {
 
 		if ( !::is_proc_shutoff() ) {
 			// create map
-			gnd::odometry::rsemap::create(&emap, param.pos_gridsize.value, param.ang_rsl.value);
+			gnd::odometry::correction::create(&cmap, param.pos_gridsize.value, param.ang_rsl.value);
 		}
 
 
@@ -860,7 +859,7 @@ int main(int argc, char* argv[]) {
 						::fabs( pos.theta - pos_opt.theta ) < gnd_deg2ang(10) ) {
 
 					if( gnd_sign(running) > 0 ) {
-						gnd::odometry::rsemap::counting(&emap, pos_opt.x, pos_opt.y, pos_opt.theta,
+						gnd::odometry::correction::counting(&cmap, pos_opt.x, pos_opt.y, pos_opt.theta,
 								running, (pos.x - pos_opt.x), (pos.y - pos_opt.y), (pos.theta - pos_opt.theta) );
 					}
 //					else {
@@ -1126,35 +1125,37 @@ int main(int argc, char* argv[]) {
 		}
 
 		{ // ---> file out
-			gnd::odometry::rsemap::pxl *p;
-			double x, y;
+			gnd::odometry::correction::vxl *p;
+			double x, y, t;
 			char fname[128];
 			char mapfname[128];
 
-			for( int i = 0; i < emap.angrsl; i++ ) {
+			for( unsigned int zi = 0; zi < cmap.zsize(); zi++ ) {
 				FILE *fp;
-				::sprintf(fname, "map%d.dat", i);
+				double uz, lz;
+				::sprintf(fname, "map%d.dat", zi);
 				fp = ::fopen(fname, "w");
-				::fprintf(fp, "# angular range %lf %lf\n", gnd::odometry::rsemap::orient(&emap, i), gnd::odometry::rsemap::orient_upper(&emap, i));
+				cmap.sget_pos_lower(0, 0, zi, 0, 0, &lz);
+				cmap.sget_pos_upper(0, 0, zi, 0, 0, &uz);
+				::fprintf(fp, "# angular range %lf %lf\n", lz, uz);
 
-				::sprintf(mapfname, "map%d.rmap", i);
+				::sprintf(mapfname, "map%d.rmap", zi);
 				// ---> row
-				for( unsigned int r = 0; r < emap.p[i].row(); r++ ) {
+				for( unsigned int yi = 0; yi < cmap.ysize(); yi++ ) {
 					// ---> column
-					for( unsigned int c = 0; c < emap.p[i].column(); c++ ) {
-						p = emap.p[i].pointer(r, c);
-						emap.p[i].pget_pos_core(r, c, &x, &y);
+					for( unsigned int xi = 0; xi < cmap.xsize(); xi++ ) {
+						p = cmap.pointer(xi, yi, zi);
+						cmap.sget_pos_core(xi,yi,zi, &x, &y, &t);
 						::fprintf( fp, "%lf %lf, %lf %lf %lf, %lf\n", x, y,
 								p->dist > 0.3 ? p->dx / p->dist : 0, p->dist > 0.3 ? p->dy / p->dist : 0, p->dist > 0.3 ? gnd_ang2deg(p->dtheta / p->dist) : 0,
 								p->dist);
-
-						emap.p[i].fwrite(mapfname);
 					} // <--- column
 				} // <--- row
 				::fclose(fp);
 			}
 
-			gnd::odometry::rsemap::write("rse-map", &emap);
+			cmap.fwrite("odometry-correction.cmap");
+//			gnd::odometry::rsemap::write("rse-map", &cmap);
 		} // <--- file out
 
 		::fprintf(stderr, "\n");

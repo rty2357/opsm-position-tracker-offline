@@ -6,12 +6,12 @@ MAKEDIR	:=mkdir -p
 SRCS	:=$(TARGET).cpp
 
 
--include subdir.mk
--include objects.mk
+-include mk/subdir.mk
+-include mk/objects.mk
 ifeq ($(MAKECMDGOALS),debug)
--include debug.mk
+-include mk/debug.mk
 else
--include options.mk
+-include mk/options.mk
 endif
 
 
@@ -28,7 +28,9 @@ all:build
 build:$(RELEASE_DIR) $(_OBJS_)
 	$(GCC) -o"$(RELEASE_DIR)$(TARGET)" $(patsubst %,$(RELEASE_DIR)%,$(_OBJS_)) $(_l_OPTION_)
 
-debug:all
+rebuild:clean build
+
+debug:rebuild
 
 clean:
 	$(REMOVE) $(patsubst %,$(RELEASE_DIR)%,$(_OBJS_)) $(RELEASE_DIR)$(TARGET)
