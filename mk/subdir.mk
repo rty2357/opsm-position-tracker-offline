@@ -9,5 +9,9 @@ SRCS_DIR			:=src/
 HEADER_DIR_LIST		:=gndlib/ ssmtype/
 
 # target release directory
+ifeq ($(MAKECMDGOALS),debug)
 RELEASE_DIR			:=Debug/
+else
+RELEASE_DIR			:=Release/
+endif
 
