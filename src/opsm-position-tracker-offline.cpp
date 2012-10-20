@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
 
 		{ // ---> show initialize task
 			::fprintf(stderr, "==========Initialize==========\n");
-			::fprintf(stderr, " %d. create optimizer class \"%s\"", phase++, param.optimizer.value);
+			::fprintf(stderr, " %d. create optimizer class \"\x1b[4m%s\x1b[0m\"\n", phase++, param.optimizer.value);
 			if( param.slam.value && *param.mapdir.value ) {
 				::fprintf(stderr, " %d. Map Data Load\n", phase++);
 				::fprintf(stderr, " %d. Build %sMap\n", phase++, param.ndt.value ? "NDT " : "");
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 		// ---> set optimizer
 		if( !::is_proc_shutoff() ) {
 			::fprintf(stderr, "\n");
-			::fprintf(stderr, " => create optimizer class \"%s\"\n", param.optimizer.value);
+			::fprintf(stderr, " => create optimizer class \"\x1b[4m%s\x1b[0m\"\n", param.optimizer.value);
 			if( !::strcmp(param.optimizer.value, OPSMPosTrack::OptNewton) ){
 				optimizer = new gnd::opsm::newton;
 				optimizer->create_starting_value(&starting);
@@ -310,6 +310,7 @@ int main(int argc, char* argv[]) {
 			gnd::gl::window.df = OPSMPosTrack::Viewer::display;
 			gnd::gl::window.idle = OPSMPosTrack::Viewer::idle;
 			gnd::gl::window.mf = OPSMPosTrack::Viewer::mouse;
+			gnd::gl::window.mmf = OPSMPosTrack::Viewer::motion;
 			gnd::gl::window.reshf = OPSMPosTrack::Viewer::reshape;
 
 			if ( param.debug_viewer.value ) gnd::gl::begin();
@@ -923,6 +924,14 @@ int main(int argc, char* argv[]) {
 						gnd::matrix::fixed<4,1> reflect_csns;
 						gnd::matrix::fixed<4,1> reflect_cgl;
 						gnd::matrix::fixed<2,1> reflect_prevent;
+
+						OPSMPosTrack::Viewer::robot_pos.wait();
+						{ // ---> set robot position
+							OPSMPosTrack::Viewer::robot_pos.var.x = pos.x;
+							OPSMPosTrack::Viewer::robot_pos.var.y = pos.y;
+							OPSMPosTrack::Viewer::robot_pos.var.t = pos.theta;
+						} // <--- set robot position
+						OPSMPosTrack::Viewer::robot_pos.post();
 
 						OPSMPosTrack::Viewer::scan_cur.wait();
 						{ // set view point data
