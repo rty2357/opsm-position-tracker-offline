@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 				starting = static_cast<void*>(p);
 				optimizer->set_converge_threshold(param.converge_dist.value,
 						gnd_deg2ang( param.converge_orient.value ) );
-				::fprintf(stderr, " ... quasi monte calro method \x1b[1mOK\x1b[0m\n");
+				::fprintf(stderr, "  ... quasi monte calro method \x1b[1mOK\x1b[0m\n");
 			}
 			else if( !::strcmp(param.optimizer.value, OPSMPosTrack::OptQMC2Newton)){
 				gnd::opsm::hybrid_q2n::starting_value *p;
@@ -163,11 +163,11 @@ int main(int argc, char* argv[]) {
 				starting = static_cast<void*>(p);
 				optimizer->set_converge_threshold(param.converge_dist.value,
 						gnd_deg2ang( param.converge_orient.value ) );
-				::fprintf(stderr, " ... quasi monte calro and newton hybrid \x1b[1mOK\x1b[0m\n");
+				::fprintf(stderr, "  ... quasi monte calro and newton hybrid \x1b[1mOK\x1b[0m\n");
 			}
 			else {
 				::proc_shutoff();
-				::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid optimizer type\n");
+				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid optimizer type\n");
 			}
 
 		} // ---> set optimizer
@@ -180,10 +180,10 @@ int main(int argc, char* argv[]) {
 			::fprintf(stderr, " => Map Data Load\n");
 			if( gnd::opsm::read_counting_map(&cnt_map, param.mapdir.value) < 0){
 				::proc_shutoff();
-				::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to map data\n");
+				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to map data\n");
 			}
 			else {
-				::fprintf(stderr, " ...\x1b[1mOK\x1b[0m\n");
+				::fprintf(stderr, "  ...\x1b[1mOK\x1b[0m\n");
 			}
 		} // <--- map data load
 
@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
 					::fprintf(stderr, "  [\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m]: Fail to ssm open \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
 				}
 				else {
-					::fprintf(stderr, "  [\x1b[1mOK\x1b[0m]: Open ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
+					::fprintf(stderr, "   ...\x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
 					ssmlog_odm.readNext();
 
 					{ // ---> set coordinate
@@ -289,7 +289,7 @@ int main(int argc, char* argv[]) {
 					{ // ---> coordinate-tree set sensor coordinate
 						coordid_sns = coordtree.add("sensor", "robot", &sokuikiraw_prop.coordm);
 					} // <--- coordinate-tree set robot coordinate
-					::fprintf(stderr, " ... \x1b[1mOK\x1b[0m\n");
+					::fprintf(stderr, "  ... \x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\n", param.ls_logname.value);
 				}
 			}
 		} // <--- open ssm sokuiki raw data
@@ -385,6 +385,7 @@ int main(int argc, char* argv[]) {
 		double cuito = 0;								// blocking time out for cui input
 
 		gnd::Time::IntervalTimer timer_show;			// time operation timer
+		int nline_show;
 
 		bool map_update = false;
 
@@ -567,8 +568,17 @@ int main(int argc, char* argv[]) {
 //			timer_operate.begin(CLOCK_REALTIME, param.cycle.value, -param.cycle.value);
 //			timer_clock.begin(CLOCK_REALTIME,
 //					param.cycle.value < ClockCycle ? param.cycle.value :  ClockCycle);
-			if( param.debug_show.value )	timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle);
-			else 							::fprintf(stderr, "  > ");
+			::fprintf(stderr, "\n");
+			if( param.debug_show.value ) {
+				timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle);
+				// console clear
+				nline_show = 0;
+			}
+			else {
+				// console clear
+				::fprintf(stderr, "-------------------- cui mode --------------------\n");
+				::fprintf(stderr, "  > ");
+			}
 		} // <--- timer
 
 
@@ -599,7 +609,12 @@ int main(int argc, char* argv[]) {
 						case '\0':
 						case 'h': gcui.show(stderr, "   "); break;
 						// show status
-						case 's': timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle); break;
+						case 's': {
+							// console clear
+							nline_show = 0;
+							timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle);
+							break;
+						}
 						case 'f': {
 							double freq = ::strtod(cuiarg, 0);
 							if( freq <= 0 ){
@@ -669,22 +684,26 @@ int main(int argc, char* argv[]) {
 
 			// ---> show status
 			if( timer_show.clock() > 0){
-				::fprintf(stderr, "\x1b[0;0H\x1b[2J");	// display clear
-				::fprintf(stderr, "-------------------- \x1b[1m\x1b[36m%s\x1b[39m\x1b[0m --------------------\n", OPSMPosTrack::proc_name);
-				::fprintf(stderr, "          loop : %d\n", cnt);
-				::fprintf(stderr, " optimize loop : %d\n", opt_cnt);
-				::fprintf(stderr, "    likelihood : %.03lf\n", lkl );
-				::fprintf(stderr, "      position : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
+				// back cusor
+				if( nline_show ) {
+					::fprintf(stderr, "\x1b[%02dA", nline_show);	nline_show = 0;
+				}
+
+				nline_show++; ::fprintf(stderr, "\x1b[K-------------------- \x1b[1m\x1b[36m%s\x1b[39m\x1b[0m --------------------\n", OPSMPosTrack::proc_name);
+				nline_show++; ::fprintf(stderr, "\x1b[K          loop : %d\n", cnt);
+				nline_show++; ::fprintf(stderr, "\x1b[K optimize loop : %d\n", opt_cnt);
+				nline_show++; ::fprintf(stderr, "\x1b[K    likelihood : %.03lf\n", lkl );
+				nline_show++; ::fprintf(stderr, "\x1b[K      position : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
 						pos.x, pos.y, gnd_ang2deg( pos.theta ) );
-				::fprintf(stderr, "      optimize : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
+				nline_show++; ::fprintf(stderr, "\x1b[K      optimize : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
 						move_opt[0][0], move_opt[1][0], gnd_ang2deg( move_opt[2][0] ) );
-				::fprintf(stderr, "      move est : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
+				nline_show++; ::fprintf(stderr, "\x1b[K      move est : %4.03lf[m], %4.03lf[m], %4.02lf[deg]\n",
 						move_est.x, move_est.y, gnd_ang2deg( move_est.theta ) );
 //				::fprintf(stderr, "      cycle : %.03lf\n", timer_operate.cycle() );
-				::fprintf(stderr, "     optimizer : %s\n", ret == 0 ? "success" : "failure" );
-				::fprintf(stderr, "    map update : %s\n", map_update ? "true" : "false" );
-				::fprintf(stderr, "\n");
-				::fprintf(stderr, " Push \x1b[1mEnter\x1b[0m to change CUI Mode\n");
+				nline_show++; ::fprintf(stderr, "\x1b[K     optimizer : %s\n", ret == 0 ? "success" : "failure" );
+				nline_show++; ::fprintf(stderr, "\x1b[K    map update : %s\n", map_update ? "true" : "false" );
+				nline_show++; ::fprintf(stderr, "\x1b[K\n");
+				nline_show++; ::fprintf(stderr, "\x1b[K Push \x1b[1mEnter\x1b[0m to change CUI Mode\n");
 			} // <--- show status
 
 			// ---> read ssm-sokuikiraw-data
