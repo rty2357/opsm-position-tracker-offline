@@ -117,8 +117,8 @@ namespace ObservationProbabilityScanMatching {
 				if( l == GLUT_DOWN ) {
 					mouse_pointer.wait();
 					{
-						offset.x += - (double)(x - mouse_pointer.var.x) * gnd::gl::window.field / gnd::gl::window.w;
-						offset.y += (double)(y - mouse_pointer.var.y) * gnd::gl::window.field / gnd::gl::window.h;
+						offset.x += - (double)(x - mouse_pointer.var.x) / gnd::gl::window.field / gnd::gl::window.w;
+						offset.y += (double)(y - mouse_pointer.var.y) / gnd::gl::window.field / gnd::gl::window.h;
 					}
 					mouse_pointer.post();
 				}

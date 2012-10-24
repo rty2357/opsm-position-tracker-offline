@@ -49,8 +49,8 @@ int main(int argc, char* argv[]) {
 	gnd::opsm::optimizer_basic	*optimizer = 0;	// optimizer class
 	void 						*starting = 0;	// optimization starting value
 
-	gnd::opsm::counting_map_t	cnt_map;		// observation probability counting map
-	gnd::opsm::map_t			op_map;			// observation probability map
+	gnd::opsm::counting_map_t	cnt_smmap;		// observation probability counting map
+	gnd::opsm::map_t			smmap;			// observation probability map
 
 	SSMLogBase					ssmlog_sokuikiraw;	// sokuiki raw streaming data
 	void*						sokuikiraw_buf;
@@ -68,8 +68,8 @@ int main(int argc, char* argv[]) {
 
 	gnd::odometry::cmap cmap;
 
-	OPSMPosTrack::proc_configuration param;	// configuration parameter
-	OPSMPosTrack::options proc_opt(&param);		// process option analyze class
+	OPSMPosTrack::proc_configuration pconf;	// configuration parameter
+	OPSMPosTrack::options popt(&pconf);		// process option analyze class
 
 	FILE *fp = 0;
 
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 
 
 		// ---> read process options
-		if( (ret = proc_opt.get_option(argc, argv)) != 0 ) {
+		if( (ret = popt.get_option(argc, argv)) != 0 ) {
 			return ret;
 		} // <--- read process options
 
@@ -120,49 +120,70 @@ int main(int argc, char* argv[]) {
 
 		{ // ---> show initialize task
 			::fprintf(stderr, "==========Initialize==========\n");
-			::fprintf(stderr, " %d. create optimizer class \"\x1b[4m%s\x1b[0m\"\n", phase++, param.optimizer.value);
-			if( param.slam.value && *param.mapdir.value ) {
-				::fprintf(stderr, " %d. Map Data Load\n", phase++);
-				::fprintf(stderr, " %d. Build %sMap\n", phase++, param.ndt.value ? "NDT " : "");
+			if( *pconf.cmap.value ) {
+				::fprintf(stderr, " %d. load correction map from \"\x1b[4m%s\x1b[0m\"\n", phase++, pconf.cmap.value);
 			}
-			::fprintf(stderr, " %d. Open ssm-log \"\x1b[4m%s\x1b[0m\"\n", phase++, param.ls_logname.value);
-			::fprintf(stderr, " %d. Open ssm-log \"\x1b[4m%s\x1b[0m\"\n", phase++, param.odm_logname.value);
+			::fprintf(stderr, " %d. create optimizer class \"\x1b[4m%s\x1b[0m\"\n", phase++, pconf.optimizer.value);
+			if( pconf.slam.value && *pconf.smmapdir.value ) {
+				::fprintf(stderr, " %d. Map Data Load\n", phase++);
+				::fprintf(stderr, " %d. Build %sMap\n", phase++, pconf.ndt.value ? "NDT " : "");
+			}
+			::fprintf(stderr, " %d. Open ssm-log \"\x1b[4m%s\x1b[0m\"\n", phase++, pconf.ls_logname.value);
+			::fprintf(stderr, " %d. Open ssm-log \"\x1b[4m%s\x1b[0m\"\n", phase++, pconf.odm_logname.value);
 			::fprintf(stderr, " %d. Initialize viewer\n", phase++);
 			::fprintf(stderr, "\n\n");
 		} // <--- show initialize task
 
 
+
+
+		// ---> load odometry correction map
+		if( !::is_proc_shutoff() && *pconf.cmap.value ) {
+			::fprintf(stderr, "\n");
+			::fprintf(stderr, " => load odometry error correction map \"\x1b[4m%s\x1b[0m\"\n", pconf.cmap.value);
+			if( cmap.fread(pconf.cmap.value) < 0 ) {
+				::proc_shutoff();
+				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to load odometry error correction map \"\x1b[4m%s\x1b[0m\"\n", pconf.cmap.value);
+			}
+			else {
+				::fprintf(stderr, "  ... \x1b[1mOK\x1b[0m: load odometry error correction map \"\x1b[4m%s\x1b[0m\"\n", pconf.cmap.value);
+			}
+		} // <--- load odometry correction map
+
+
+
+
 		// ---> set optimizer
 		if( !::is_proc_shutoff() ) {
 			::fprintf(stderr, "\n");
-			::fprintf(stderr, " => create optimizer class \"\x1b[4m%s\x1b[0m\"\n", param.optimizer.value);
-			if( !::strcmp(param.optimizer.value, OPSMPosTrack::OptNewton) ){
+			::fprintf(stderr, " => create optimizer class \"\x1b[4m%s\x1b[0m\"\n", pconf.optimizer.value);
+			if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptNewton) ){
 				optimizer = new gnd::opsm::newton;
 				optimizer->create_starting_value(&starting);
-				optimizer->set_converge_threshold(param.converge_dist.value,
-						gnd_deg2ang( param.converge_orient.value ) );
+				optimizer->set_converge_threshold(pconf.converge_dist.value,
+						gnd_deg2ang( pconf.converge_orient.value ) );
 				::fprintf(stderr, " ... newton's method \x1b[1mOK\x1b[0m\n");
 			}
-			else if( !::strcmp(param.optimizer.value, OPSMPosTrack::OptQMC)){
+			else if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptQMC)){
 				gnd::opsm::qmc::starting_value *p;
 				optimizer = new gnd::opsm::qmc;
 				optimizer->create_starting_value(&starting);
 				p = static_cast<gnd::opsm::qmc::starting_value*>(starting);
 				p->n = 2;
 				starting = static_cast<void*>(p);
-				optimizer->set_converge_threshold(param.converge_dist.value,
-						gnd_deg2ang( param.converge_orient.value ) );
+				optimizer->set_converge_threshold(pconf.converge_dist.value,
+						gnd_deg2ang( pconf.converge_orient.value ) );
 				::fprintf(stderr, "  ... quasi monte calro method \x1b[1mOK\x1b[0m\n");
 			}
-			else if( !::strcmp(param.optimizer.value, OPSMPosTrack::OptQMC2Newton)){
+			else if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptQMC2Newton)){
 				gnd::opsm::hybrid_q2n::starting_value *p;
 				optimizer = new gnd::opsm::hybrid_q2n;
 				optimizer->create_starting_value(&starting);
 				p = static_cast<gnd::opsm::hybrid_q2n::starting_value*>(starting);
 				p->n = 2;
 				starting = static_cast<void*>(p);
-				optimizer->set_converge_threshold(param.converge_dist.value,
-						gnd_deg2ang( param.converge_orient.value ) );
+				optimizer->set_converge_threshold(pconf.converge_dist.value,
+						gnd_deg2ang( pconf.converge_orient.value ) );
 				::fprintf(stderr, "  ... quasi monte calro and newton hybrid \x1b[1mOK\x1b[0m\n");
 			}
 			else {
@@ -174,69 +195,60 @@ int main(int argc, char* argv[]) {
 
 
 
-		// ---> map data load
-		if( !::is_proc_shutoff() && param.slam.value && *param.mapdir.value ){
-			::fprintf(stderr, "\n");
-			::fprintf(stderr, " => Map Data Load\n");
-			if( gnd::opsm::read_counting_map(&cnt_map, param.mapdir.value) < 0){
-				::proc_shutoff();
-				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to map data\n");
-			}
-			else {
-				::fprintf(stderr, "  ...\x1b[1mOK\x1b[0m\n");
-			}
-		} // <--- map data load
-
-
 
 		// ---> build map
-		if( !::is_proc_shutoff() && param.slam.value && *param.mapdir.value ){
+		if( !::is_proc_shutoff() && pconf.slam.value && *pconf.smmapdir.value ){
 			::fprintf(stderr, "\n");
-			if( !param.ndt.value){
-				::fprintf(stderr, " => Build Map\n");
-				if( gnd::opsm::build_map(&op_map, &cnt_map, 10, 1, 0.5) < 0) {
+			::fprintf(stderr, " => load scan matching map from \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
+			if( gnd::opsm::read_counting_map(&cnt_smmap, pconf.smmapdir.value) < 0){
+				::proc_shutoff();
+				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to load scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
+			}
+			else if( !pconf.ndt.value){
+				if( gnd::opsm::build_map(&smmap, &cnt_smmap, 10, 1, 0.5) < 0) {
 					::proc_shutoff();
-					::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to build scan matching map\n");
+					::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to build scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 				}
 				else {
-					::fprintf(stderr, " ...\x1b[1mOK\x1b[0m\n");
+					::fprintf(stderr, "  ... \x1b[1mOK\x1b[0m: load scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 				}
 			}
 			else {
-				::fprintf(stderr, " => Build NDT Map\n");
-				if(gnd::opsm::build_ndt_map(&op_map, &cnt_map, gnd_mm2dist(1)) < 0){
+				if(gnd::opsm::build_ndt_map(&smmap, &cnt_smmap, gnd_mm2dist(1)) < 0){
 					::proc_shutoff();
-					::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to build scan matching map\n");
+					::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to build scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 				}
 				else {
-					::fprintf(stderr, " ...\x1b[1mOK\x1b[0m\n");
+					::fprintf(stderr, "  ... \x1b[1mOK\x1b[0m: load scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 				}
 			}
 		} // <--- build map
 
+
 		// set map
-		if(!::is_proc_shutoff() )	optimizer->set_map(&op_map);
+		if(!::is_proc_shutoff() )	optimizer->set_map(&smmap);
 
 
 
 		// ---> open ssm odometry
 		if( !::is_proc_shutoff() ){
 			::fprintf(stderr, "\n");
-			::fprintf(stderr, " => Create ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
-			if( !(*param.odm_logname.value) ){
+			::fprintf(stderr, " => load ssm-data \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
+			if( !(*pconf.odm_logname.value) ){
 				// shut off
 				::proc_shutoff();
 				::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: missing log file operand\n" );
 				::fprintf(stderr, "     please show help, ./%s -S <sokuiki.log> -O <odometry.log>\n", OPSMPosTrack::proc_name );
 			}
 			else {
-				::fprintf(stderr, "    File \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
+				::fprintf(stderr, "    File \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
 
-				if( !ssmlog_odm.open( param.odm_logname.value ) ){
-					::fprintf(stderr, "  [\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m]: Fail to ssm open \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
+				if( !ssmlog_odm.open( pconf.odm_logname.value ) ){
+					::proc_shutoff();
+					::fprintf(stderr, "  [\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m]: fail to load ssm-log \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
 				}
 				else {
-					::fprintf(stderr, "   ...\x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
+					::fprintf(stderr, "   ...\x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
 					ssmlog_odm.readNext();
 
 					{ // ---> set coordinate
@@ -258,19 +270,19 @@ int main(int argc, char* argv[]) {
 		// ---> open ssm sokuiki raw data
 		if(!::is_proc_shutoff()){
 			::fprintf(stderr, "\n");
-			::fprintf(stderr, " => Open ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.ls_logname.value);
+			::fprintf(stderr, " => load ssm-data \"\x1b[4m%s\x1b[0m\"\n", pconf.ls_logname.value);
 
-			if( ! *param.ls_logname.value ){
+			if( ! *pconf.ls_logname.value ){
 				::proc_shutoff();
 				::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: missing log file operand\n" );
 				::fprintf(stderr, "     please show help, ./%s -S <sokuiki.log> -O <odometry.log>\n", OPSMPosTrack::proc_name );
 			}
 			else {
-				::fprintf(stderr, "    File \"\x1b[4m%s\x1b[0m\"\n", param.odm_logname.value);
+				::fprintf(stderr, "    File \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
 
-				if( !ssmlog_sokuikiraw.open( param.ls_logname.value ) ){
+				if( !ssmlog_sokuikiraw.open( pconf.ls_logname.value ) ){
 					::proc_shutoff();
-					::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to open ssm-data \"\x1b[4m%s\x1b[0m\"\n", param.ls_logname.value);
+					::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to load ssm-log \"\x1b[4m%s\x1b[0m\"\n", pconf.ls_logname.value);
 				}
 				// get property
 				else {
@@ -289,7 +301,7 @@ int main(int argc, char* argv[]) {
 					{ // ---> coordinate-tree set sensor coordinate
 						coordid_sns = coordtree.add("sensor", "robot", &sokuikiraw_prop.coordm);
 					} // <--- coordinate-tree set robot coordinate
-					::fprintf(stderr, "  ... \x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\n", param.ls_logname.value);
+					::fprintf(stderr, " ... \x1b[1mOK\x1b[0m: Open ssm-data \"\x1b[4m%s\x1b[0m\n", pconf.ls_logname.value);
 				}
 			}
 		} // <--- open ssm sokuiki raw data
@@ -313,7 +325,7 @@ int main(int argc, char* argv[]) {
 			gnd::gl::window.mmf = OPSMPosTrack::Viewer::motion;
 			gnd::gl::window.reshf = OPSMPosTrack::Viewer::reshape;
 
-			if ( param.debug_viewer.value ) gnd::gl::begin();
+			if ( pconf.debug_viewer.value ) gnd::gl::begin();
 		} // <--- viewer initialization
 
 
@@ -327,9 +339,9 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if ( !::is_proc_shutoff() ) {
+		if ( !::is_proc_shutoff() && !cmap.is_allocate()) {
 			// create map
-			gnd::odometry::correction::create(&cmap, param.pos_gridsize.value, param.ang_rsl.value);
+			gnd::odometry::correction::create(&cmap, pconf.pos_gridsize.value, pconf.ang_rsl.value);
 		}
 
 
@@ -361,7 +373,7 @@ int main(int argc, char* argv[]) {
 		Spur_Odometry move_est;							// estimation of movement quantity
 
 		double decimate_sqdist							// data decimation threshold
-			= gnd_square( param.decimate.value );
+			= gnd_square( pconf.decimate.value );
 		double lkl = 0;									// likelihood
 		double lkl_prev_opt = 0;						// previous likelihood
 		Spur_Odometry pos_opt;							// optimized position
@@ -377,7 +389,7 @@ int main(int argc, char* argv[]) {
 		ssmTimeT time_premap = 0;						// previous map update time
 
 		double sqdist_mapup =							// distance threshold of map update
-				gnd_square( param.rest_dist.value );
+				gnd_square( pconf.rest_dist.value );
 
 		gnd::matrix::fixed<4,4> coordm_sns2rbt;			// coordinate convert matrix from sensor to robot
 		gnd::matrix::fixed<4,4> coordm_sns2gl;				// coordinate convert matrix from sensor to global
@@ -403,17 +415,17 @@ int main(int argc, char* argv[]) {
 
 
 		// ---> memory allocate counting map
-		if( !cnt_map.plane[0].is_allocate() ){
-			gnd::opsm::init_counting_map(&cnt_map, 0.5, 10);
+		if( !cnt_smmap.plane[0].is_allocate() ){
+			gnd::opsm::init_counting_map(&cnt_smmap, 0.5, 10);
 		} // <--- memory allocate counting map
 
 
-		{ // ---> map initialization
+		if( !(*pconf.smmapdir.value) ){ // ---> map initialization
 			int cnt_ls = 0;
 
 			::fprintf(stderr, "-------------------- map initialize  --------------------\n");
 			// ---> map initialization loop
-			while( !::is_proc_shutoff() && cnt_ls < param.ini_map_cnt.value ) {
+			while( !::is_proc_shutoff() && cnt_ls < pconf.ini_map_cnt.value ) {
 
 				// ---> read ssm-sokuikiraw-data
 				if(ssmlog_sokuikiraw.readNext()) {
@@ -539,7 +551,7 @@ int main(int argc, char* argv[]) {
 							} // <--- compute laser scanner reading position on robot coordinate
 
 							// data entry
-							gnd::opsm::counting_map(&cnt_map, reflect_cgl[0][0], reflect_cgl[1][0]);
+							gnd::opsm::counting_map(&cnt_smmap, reflect_cgl[0][0], reflect_cgl[1][0]);
 						} // <--- scanning loop for sokuikiraw-data
 					} // <--- 3. entry laser scanner reading
 
@@ -551,7 +563,7 @@ int main(int argc, char* argv[]) {
 			} // <--- map initialization loop
 
 			// ---> map build
-			if( gnd::opsm::build_map(&op_map, &cnt_map, 10, 1.0e-3, 0) < 0 ){
+			if( gnd::opsm::build_map(&smmap, &cnt_smmap, 10, 1.0e-3, 0) < 0 ){
 				::fprintf(stderr, "\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid map property\n");
 			}
 			else {
@@ -569,7 +581,7 @@ int main(int argc, char* argv[]) {
 //			timer_clock.begin(CLOCK_REALTIME,
 //					param.cycle.value < ClockCycle ? param.cycle.value :  ClockCycle);
 			::fprintf(stderr, "\n");
-			if( param.debug_show.value ) {
+			if( pconf.debug_show.value ) {
 				timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle);
 				// console clear
 				nline_show = 0;
@@ -598,6 +610,7 @@ int main(int argc, char* argv[]) {
 					if( timer_show.cycle() > 0 ){
 						// quit show status mode
 						timer_show.end();
+						nline_show = 0;
 						::fprintf(stderr, "-------------------- cui mode --------------------\n");
 					}
 					else { // ---> cui command operation
@@ -611,7 +624,6 @@ int main(int argc, char* argv[]) {
 						// show status
 						case 's': {
 							// console clear
-							nline_show = 0;
 							timer_show.begin(CLOCK_REALTIME, ShowCycle, -ShowCycle);
 							break;
 						}
@@ -656,7 +668,7 @@ int main(int argc, char* argv[]) {
 						} break;
 
 						case 'v': {
-							if ( !param.debug_viewer.value ) {
+							if ( !pconf.debug_viewer.value ) {
 								::fprintf(stderr, "   ... create window\n");
 								if( !gnd::gl::is_thread_fin() ) {
 									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not create because of thread is busy\n");
@@ -664,14 +676,14 @@ int main(int argc, char* argv[]) {
 								else if( gnd::gl::begin() < 0){
 									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not create because of thread is busy\n");
 								}
-								param.debug_viewer.value = true;
+								pconf.debug_viewer.value = true;
 							}
-							else if ( param.debug_viewer.value ) {
+							else if ( pconf.debug_viewer.value ) {
 								::fprintf(stderr, "   ... delete\n");
 								if( gnd::gl::end() < 0 ) {
 									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not delete window\n");
 								}
-								param.debug_viewer.value = false;
+								pconf.debug_viewer.value = false;
 							}
 						} break;
 						}
@@ -686,7 +698,8 @@ int main(int argc, char* argv[]) {
 			if( timer_show.clock() > 0){
 				// back cusor
 				if( nline_show ) {
-					::fprintf(stderr, "\x1b[%02dA", nline_show);	nline_show = 0;
+					::fprintf(stderr, "\x1b[%02dA", nline_show);
+					nline_show = 0;
 				}
 
 				nline_show++; ::fprintf(stderr, "\x1b[K-------------------- \x1b[1m\x1b[36m%s\x1b[39m\x1b[0m --------------------\n", OPSMPosTrack::proc_name);
@@ -705,6 +718,9 @@ int main(int argc, char* argv[]) {
 				nline_show++; ::fprintf(stderr, "\x1b[K\n");
 				nline_show++; ::fprintf(stderr, "\x1b[K Push \x1b[1mEnter\x1b[0m to change CUI Mode\n");
 			} // <--- show status
+
+
+
 
 			// ---> read ssm-sokuikiraw-data
 			if( ssmlog_sokuikiraw.readNext()) {
@@ -728,7 +744,7 @@ int main(int argc, char* argv[]) {
 					prev_time = ssmlog_odm.time();
 					running += ssmlog_odm.data().v * dt;
 
-					if( running * running < param.rest_dist.value * param.rest_dist.value  )
+					if( running * running < pconf.rest_dist.value * pconf.rest_dist.value  )
 						continue;
 
                     ssm::ScanPoint2D::_ssmRead( ssmlog_sokuikiraw.data(), &sokuikiraw, 0);
@@ -878,7 +894,7 @@ int main(int argc, char* argv[]) {
 						gnd_square( pos.x - pos_opt.x ) + gnd_square( pos.y - pos_opt.y ) < gnd_square( 1 ) &&
 						::fabs( pos.theta - pos_opt.theta ) < gnd_deg2ang(10) ) {
 
-					if( gnd_sign(running) > 0 ) {
+					if( running > 0  ) {
 						gnd::odometry::correction::counting(&cmap, pos_opt.x, pos_opt.y, pos_opt.theta,
 								running, (pos.x - pos_opt.x), (pos.y - pos_opt.y), (pos.theta - pos_opt.theta) );
 					}
@@ -931,12 +947,12 @@ int main(int argc, char* argv[]) {
 
 				{ // ---> 6. update map and view data
 					// map update check, 1st. time, 2nd. position, 3rd. orient
-					map_update = ssmlog_sokuikiraw.time() - time_premap > param.rest_cycle.value ||
+					map_update = ssmlog_sokuikiraw.time() - time_premap > pconf.rest_cycle.value ||
 							gnd_square( pos.x - pos_premap.x) + gnd_square( pos.y - pos_premap.y) > sqdist_mapup ||
-							::fabs( pos.theta - pos_premap.theta ) > param.rest_orient.value;
+							::fabs( pos.theta - pos_premap.theta ) > pconf.rest_orient.value;
 
-					if( map_update && !param.slam.value ){ // ---> clear
-						gnd::opsm::clear_counting_map(&cnt_map);
+					if( map_update && !pconf.slam.value ){ // ---> clear
+						gnd::opsm::clear_counting_map(&cnt_smmap);
 					} // <--- clear
 
 					{// ---> scanning loop for sokuikiraw-data
@@ -1002,11 +1018,11 @@ int main(int argc, char* argv[]) {
 
 							// ---> enter laser scanner reading to map
 							if( map_update ) {
-								if( param.slam.value ){
-									gnd::opsm::update_map(&cnt_map, &op_map, reflect_cgl[0][0], reflect_cgl[1][0], gnd_m2dist(10), gnd_mm2dist(1), 0.5);
+								if( pconf.slam.value ){
+									gnd::opsm::update_map(&cnt_smmap, &smmap, reflect_cgl[0][0], reflect_cgl[1][0], gnd_m2dist(10), gnd_mm2dist(1), 0.5);
 								}
 								else {
-									gnd::opsm::counting_map(&cnt_map, reflect_cgl[0][0], reflect_cgl[1][0]);
+									gnd::opsm::counting_map(&cnt_smmap, reflect_cgl[0][0], reflect_cgl[1][0]);
 								}
 								// update
 								time_premap = ssmlog_sokuikiraw.time();
@@ -1024,23 +1040,23 @@ int main(int argc, char* argv[]) {
 					} // <--- scanning loop for sokuikiraw-data
 
 
-					// ---> update map
+					// ---> rebuild map
 					if( map_update) {
-						if( param.slam.value ){
+						if( pconf.slam.value ){
 						}
 						else {
-							if( param.ndt.value ){
-								if( gnd::opsm::build_map(&op_map, &cnt_map, 10, 1.0e-3, 0) < 0 ){
+							if( !pconf.ndt.value ){
+								if( gnd::opsm::build_map(&smmap, &cnt_smmap, 10, 1.0e-3, 0) < 0 ){
 									::fprintf(stderr, "\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid map property\n");
 								}
 							}
 							else{
-								if( gnd::opsm::build_ndt_map(&op_map, &cnt_map, 1.0e-3) < 0 ){
+								if( gnd::opsm::build_ndt_map(&smmap, &cnt_smmap, 1.0e-3) < 0 ){
 									::fprintf(stderr, "\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid map property\n");
 								}
 							}
 						}
-					} // <--- update map
+					} // <--- rebuild map
 				} // ---> 6. update map and view data
 				odo_prevloop = ssmlog_odm.data();
 				cnt++;
@@ -1060,16 +1076,22 @@ int main(int argc, char* argv[]) {
 		delete optimizer;
 
 		// slam
-		if( param.slam.value ) {
+		if( pconf.slam.value ) {
 			gnd::bmp32_t bmp;
 			gnd::bmp8_t bmp8;
 
-			gnd::opsm::build_map(&op_map, &cnt_map, gnd_m2dist(10), gnd_mm2dist(1), 5);
+			// ---> build map
+			if( pconf.ndt.value ) {
+				gnd::opsm::build_ndt_map(&smmap, &cnt_smmap, gnd_mm2dist(1));
+			}
+			else {
+				gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_m2dist(20), gnd_mm2dist(1), 5);
+			} // <--- build map
 
 			{ // ---> write intermediate file
 				::fprintf(stderr, " => write intermediate file\n");
 
-				if( gnd::opsm::write_counting_map(&cnt_map, "map") ) {
+				if( gnd::opsm::write_counting_map(&cnt_smmap, "smmap") ) {
 					::fprintf(stderr, "  ... \x1b[1m\x1b[31mError\x1b[39m\x1b[0m: fail to open\n");
 				}
 				else {
@@ -1080,7 +1102,7 @@ int main(int argc, char* argv[]) {
 
 			// bmp file building
 			::fprintf(stderr, " => bmp map building\n");
-			gnd::opsm::build_bmp32(&bmp, &op_map, gnd_m2dist( 1.0 / 8) );
+			gnd::opsm::build_bmp32(&bmp, &smmap, gnd_m2dist( 1.0 / 8) );
 
 			{ // ---> file out
 				{ // ---> bmp
@@ -1115,7 +1137,7 @@ int main(int argc, char* argv[]) {
 
 			// bmp file building
 			::fprintf(stderr, " => bmp map building\n");
-			gnd::opsm::build_bmp8(&bmp8, &op_map, gnd_m2dist( 1.0 / 8) );
+			gnd::opsm::build_bmp8(&bmp8, &smmap, gnd_m2dist( 1.0 / 8) );
 
 			{ // ---> file out
 				{ // ---> bmp

@@ -23,15 +23,26 @@
 #define __OPTIMIZER_QMC__	 		"qmc"
 #define __OPTIMIZER_QMC2NEWTON__	"qmc2newton"
 
+
+// ---> constant definition
 namespace ObservationProbabilityScanMatching {
 	namespace PositionTracker {
 		static const char proc_name[] = "opsm-position-tracker";
 
 		// map-file
-		static const gnd::Conf::parameter_array<char, 512> ConfIni_MapDir = {
-				"map-dir",
+		static const gnd::Conf::parameter_array<char, 512> ConfIni_ScanMatchingMapDir = {
+				"scan-matching-map",
 				"",		// map file directory
+				"scan matching map directory path (optional argument)"
 		};
+
+		// map-file
+		static const gnd::Conf::parameter_array<char, 512> ConfIni_CorrectionMapPath = {
+				"correction-map",
+				"",		// map path
+				"correction map file path (optional argument)"
+		};
+
 		// ssm-name
 		static const gnd::Conf::parameter_array<char, 512> ConfIni_OdometryLogName = {
 				"odm-log-name",
@@ -124,24 +135,74 @@ namespace ObservationProbabilityScanMatching {
 
 		// number of scan data for first map building
 		static const gnd::Conf::parameter<double> ConfIni_PosGridSize = {
-				"road-map-pos-grid",
+				"correction-map-pos-grid",
 				0.5,	// [m]
 		};
 
 		// number of scan data for first map building
 		static const gnd::Conf::parameter<int> ConfIni_AngReslution = {
-				"road-map-ang-rsl",
+				"correction-map-ang-rsl",
 				8,	// [m]
 		};
 
+	} // <--- namespace ObservationProbabilityScanMatching
+} // <--- namespace PositionTracker
+// <--- constant definition
 
+
+// ---> type declaration
+namespace ObservationProbabilityScanMatching {
+	namespace PositionTracker {
+		struct proc_configuration;
+		typedef struct proc_configuration proc_configuration;
+	}
+}
+// ---> type declaration
+
+
+// ---> function declaration
+namespace ObservationProbabilityScanMatching {
+	namespace PositionTracker {
+		/*
+		 * @brief initialize configure to default parameter
+		 */
+		int proc_conf_initialize(proc_configuration *conf);
+
+		/*
+		 * @brief get configuration parameter
+		 */
+		int proc_conf_get( gnd::Conf::Configuration* src, proc_configuration* dest );
+		/*
+		 * @brief set configuration parameter
+		 */
+		int proc_conf_set( gnd::Conf::Configuration* dest, proc_configuration* src );
+
+		/*
+		 * @brief read configuration parameter
+		 */
+		int proc_conf_read( const char* f, proc_configuration* dest );
+		/*
+		 * @brief write configuration parameter
+		 */
+		int proc_conf_write( const char* f, proc_configuration* src );
+
+	}
+}
+// ---> function declaration
+
+
+
+// ---> type definition
+namespace ObservationProbabilityScanMatching {
+	namespace PositionTracker {
 		/**
 		 * \brief particle localizer configure
 		 */
 		struct proc_configuration {
 			proc_configuration();
 
-			gnd::Conf::parameter_array<char, 512>	mapdir;				///< map data directory
+			gnd::Conf::parameter_array<char, 512>	smmapdir;			///< scan matching map directory path
+			gnd::Conf::parameter_array<char, 512>	cmap;				///< correction map path
 			gnd::Conf::parameter_array<char, 512>	odm_logname;		///< odometry position estimation ssm-name
 			gnd::Conf::parameter_array<char, 512>	ls_logname;			///< laser scanner data ssm-name
 			gnd::Conf::parameter<double>			decimate;			///< laser scanner data decimate parameter [m]
@@ -164,31 +225,33 @@ namespace ObservationProbabilityScanMatching {
 		typedef struct proc_configuration configure_parameters;
 
 		/**
-		 * @brief initialize configure to default parameter
-		 */
-		int configure_initialize(proc_configuration *conf);
-
-		/**
-		 * @brief analyze configure file
-		 */
-		int analyze_configure(gnd::Conf::Configuration *fconf, proc_configuration *confp);
-
-		/**
 		 * @brief constructor
 		 */
 		inline
 		proc_configuration::proc_configuration(){
-			configure_initialize(this);
+			proc_conf_initialize(this);
 		}
+
+	}
+}
+// ---> type definition
+
+
+
+
+// ---> function definition
+namespace ObservationProbabilityScanMatching {
+	namespace PositionTracker {
 
 		/**
 		 * @brief initialize configure
 		 */
 		inline
-		int configure_initialize(proc_configuration *conf){
+		int proc_conf_initialize(proc_configuration *conf){
 			gnd_assert(!conf, -1, "invalid null pointer");
 
-			::memcpy(&conf->mapdir,				&ConfIni_MapDir,				sizeof(ConfIni_MapDir) );
+			::memcpy(&conf->smmapdir,			&ConfIni_ScanMatchingMapDir,	sizeof(ConfIni_ScanMatchingMapDir) );
+			::memcpy(&conf->cmap,				&ConfIni_CorrectionMapPath,		sizeof(ConfIni_CorrectionMapPath) );
 			::memcpy(&conf->odm_logname,		&ConfIni_OdometryLogName,		sizeof(ConfIni_OdometryLogName) );
 			::memcpy(&conf->ls_logname,			&ConfIni_LaserScannerLogName,	sizeof(ConfIni_LaserScannerLogName) );
 			::memcpy(&conf->decimate,			&ConfIni_Decimate,				sizeof(ConfIni_Decimate) );
@@ -211,34 +274,38 @@ namespace ObservationProbabilityScanMatching {
 		}
 
 		/**
-		 * @brief analyze
+		 * @brief get configuration parameter
+		 * @param  [in] src  : configuration
+		 * @param [out] dest : configuration parameter
 		 */
 		inline
-		int get_config_param(gnd::Conf::Configuration *conf, proc_configuration *confp)
+		int proc_conf_get( gnd::Conf::Configuration* src, proc_configuration* dest )
 		{
-			gnd_assert(!conf, -1, "invalid null pointer");
-			gnd_assert(!confp, -1, "invalid null pointer");
+			gnd_assert(!src, -1, "invalid null pointer");
+			gnd_assert(!dest, -1, "invalid null pointer");
 
-			gnd::Conf::get_parameter( conf, &confp->mapdir );
-			gnd::Conf::get_parameter( conf, &confp->odm_logname );
-			gnd::Conf::get_parameter( conf, &confp->ls_logname );
-			gnd::Conf::get_parameter( conf, &confp->decimate );
-			gnd::Conf::get_parameter( conf, &confp->cycle );
-			gnd::Conf::get_parameter( conf, &confp->rest_cycle );
-			gnd::Conf::get_parameter( conf, &confp->rest_dist );
-			gnd::Conf::get_parameter( conf, &confp->rest_orient );
-			gnd::Conf::get_parameter( conf, &confp->slam );
-			gnd::Conf::get_parameter( conf, &confp->optimizer );
-			gnd::Conf::get_parameter( conf, &confp->converge_dist );
-			gnd::Conf::get_parameter( conf, &confp->converge_orient );
-			gnd::Conf::get_parameter( conf, &confp->ini_map_cnt );
-			gnd::Conf::get_parameter( conf, &confp->ndt );
-			gnd::Conf::get_parameter( conf, &confp->debug_viewer );
-			gnd::Conf::get_parameter( conf, &confp->debug_show );
-			gnd::Conf::get_parameter( conf, &confp->pos_gridsize );
-			gnd::Conf::get_parameter( conf, &confp->ang_rsl );
+			gnd::Conf::get_parameter( src, &dest->smmapdir );
+			gnd::Conf::get_parameter( src, &dest->cmap );
+			gnd::Conf::get_parameter( src, &dest->decimate );
+			gnd::Conf::get_parameter( src, &dest->cycle );
+			gnd::Conf::get_parameter( src, &dest->rest_cycle );
+			gnd::Conf::get_parameter( src, &dest->rest_dist );
+			gnd::Conf::get_parameter( src, &dest->rest_orient );
+			gnd::Conf::get_parameter( src, &dest->slam );
+			gnd::Conf::get_parameter( src, &dest->optimizer );
+			gnd::Conf::get_parameter( src, &dest->converge_dist );
+			gnd::Conf::get_parameter( src, &dest->converge_orient );
+			gnd::Conf::get_parameter( src, &dest->ini_map_cnt );
+			gnd::Conf::get_parameter( src, &dest->ndt );
+			gnd::Conf::get_parameter( src, &dest->debug_viewer );
+			gnd::Conf::get_parameter( src, &dest->debug_show );
+			gnd::Conf::get_parameter( src, &dest->pos_gridsize );
+			gnd::Conf::get_parameter( src, &dest->ang_rsl );
 
-			confp->rest_orient.value = gnd_deg2rad(confp->rest_orient.value);
+			dest->rest_orient.value = gnd_deg2rad(dest->rest_orient.value);
+
+			gnd::Conf::get_parameter( src, &dest->odm_logname );
+			gnd::Conf::get_parameter( src, &dest->ls_logname );
 			return 0;
 		}
 
@@ -246,39 +313,88 @@ namespace ObservationProbabilityScanMatching {
 		 * @brief file out  configure file
 		 */
 		inline
-		int write_configuration( const char* fname, proc_configuration *confp ){
+		int proc_conf_set( gnd::Conf::Configuration* dest, proc_configuration* src ) {
 
-			gnd_assert(!fname, -1, "invalid null pointer");
-			gnd_assert(!confp, -1, "invalid null pointer");
+			gnd_assert(!dest, -1, "invalid null pointer");
+			gnd_assert(!src, -1, "invalid null pointer");
 
 			{ // ---> operation
-				gnd::Conf::FileStream conf;
-				gnd::Conf::set_parameter(&conf, &confp->mapdir);
-				gnd::Conf::set_parameter(&conf, &confp->odm_logname);
-				gnd::Conf::set_parameter(&conf, &confp->ls_logname);
-				gnd::Conf::set_parameter(&conf, &confp->decimate);
-				gnd::Conf::set_parameter(&conf, &confp->cycle);
-				gnd::Conf::set_parameter(&conf, &confp->rest_cycle);
-				gnd::Conf::set_parameter(&conf, &confp->rest_dist);
-				gnd::Conf::set_parameter(&conf, &confp->rest_orient);
-				gnd::Conf::set_parameter(&conf, &confp->slam);
-				gnd::Conf::set_parameter(&conf, &confp->optimizer);
-				gnd::Conf::set_parameter(&conf, &confp->converge_dist);
-				gnd::Conf::set_parameter(&conf, &confp->converge_orient);
-				gnd::Conf::set_parameter(&conf, &confp->ini_map_cnt );
-				gnd::Conf::set_parameter(&conf, &confp->ndt);
-				gnd::Conf::set_parameter(&conf, &confp->debug_viewer );
-				gnd::Conf::set_parameter(&conf, &confp->debug_show );
+				gnd::Conf::set_parameter(dest, &src->smmapdir);
+				gnd::Conf::set_parameter(dest, &src->cmap );
+				gnd::Conf::set_parameter(dest, &src->decimate);
+				gnd::Conf::set_parameter(dest, &src->cycle);
+				gnd::Conf::set_parameter(dest, &src->rest_cycle);
+				gnd::Conf::set_parameter(dest, &src->rest_dist);
+				gnd::Conf::set_parameter(dest, &src->rest_orient);
+				gnd::Conf::set_parameter(dest, &src->slam);
+				gnd::Conf::set_parameter(dest, &src->optimizer);
+				gnd::Conf::set_parameter(dest, &src->converge_dist);
+				gnd::Conf::set_parameter(dest, &src->converge_orient);
+				gnd::Conf::set_parameter(dest, &src->ini_map_cnt );
+				gnd::Conf::set_parameter(dest, &src->ndt);
+				gnd::Conf::set_parameter(dest, &src->debug_viewer );
+				gnd::Conf::set_parameter(dest, &src->debug_show );
 
-				gnd::Conf::set_parameter(&conf, &confp->pos_gridsize );
-				gnd::Conf::set_parameter(&conf, &confp->ang_rsl );
+				gnd::Conf::set_parameter(dest, &src->pos_gridsize );
 
-				return conf.write(fname);
+				src->rest_orient.value = gnd_rad2deg(src->rest_orient.value);
+				gnd::Conf::set_parameter(dest, &src->ang_rsl );
+				src->rest_orient.value = gnd_deg2rad(src->rest_orient.value);
+
+
+				gnd::Conf::set_parameter(dest, &src->odm_logname);
+				gnd::Conf::set_parameter(dest, &src->ls_logname);
+
+				return 0;
 			} // <--- operation
 		}
 
+
+        /**
+         * @brief read configuration parameter file
+         * @param [in]  f    : configuration file name
+         * @param [out] dest : configuration parameter
+         */
+        inline
+        int proc_conf_read(const char* f, proc_configuration* dest) {
+                gnd_assert(!f, -1, "invalid null pointer");
+                gnd_assert(!dest, -1, "invalid null pointer");
+
+                { // ---> operation
+                        int ret;
+                        gnd::Conf::FileStream fs;
+                        // configuration file read
+                        if( (ret = fs.read(f)) < 0 )    return ret;
+
+                        return proc_conf_get(&fs, dest);
+                } // <--- operation
+        }
+
+        /**
+         * @brief write configuration parameter file
+         * @param [in]  f  : configuration file name
+         * @param [in] src : configuration parameter
+         */
+        inline
+        int proc_conf_write(const char* f, proc_configuration* src){
+                gnd_assert(!f, -1, "invalid null pointer");
+                gnd_assert(!src, -1, "invalid null pointer");
+
+                { // ---> operation
+                        int ret;
+                        gnd::Conf::FileStream fs;
+                        // convert configuration declaration
+                        if( (ret = proc_conf_set(&fs, src)) < 0 ) return ret;
+
+                        return fs.write(f);
+                } // <--- operation
+        }
+
+
 	} // namespace PositionTracker
 }; // namespace ObservationProbabilityScanMatching
+// <--- function definition
+
 
 #undef __OPTIMIZER_NEWTON__
 #undef __OPTIMIZER_QMC__
