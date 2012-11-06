@@ -341,7 +341,7 @@ int main(int argc, char* argv[]) {
 
 		if ( !::is_proc_shutoff() && !cmap.is_allocate()) {
 			// create map
-			gnd::odometry::correction::create(&cmap, pconf.pos_gridsize.value, pconf.ang_rsl.value);
+			gnd::odometry::correction::create(&cmap, pconf.pos_gridsizex.value, pconf.pos_gridsizey.value, pconf.ang_rsl.value);
 		}
 
 
@@ -1085,7 +1085,7 @@ int main(int argc, char* argv[]) {
 				gnd::opsm::build_ndt_map(&smmap, &cnt_smmap, gnd_mm2dist(1));
 			}
 			else {
-				gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_m2dist(20), gnd_mm2dist(1), 5);
+				gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_m2dist(30), gnd_mm2dist(1), 5);
 			} // <--- build map
 
 			{ // ---> write intermediate file
@@ -1197,7 +1197,7 @@ int main(int argc, char* argv[]) {
 						p = cmap.pointer(xi, yi, zi);
 						cmap.sget_pos_core(xi,yi,zi, &x, &y, &t);
 						::fprintf( fp, "%lf %lf, %lf %lf %lf, %lf\n", x, y,
-								p->dist > 0.3 ? p->dx / p->dist : 0, p->dist > 0.3 ? p->dy / p->dist : 0, p->dist > 0.3 ? gnd_ang2deg(p->dtheta / p->dist) : 0,
+								p->dist > 0.01 ? p->dx / p->dist : 0, p->dist > 0.01 ? p->dy / p->dist : 0, p->dist > 0.01 ? gnd_ang2deg(p->dtheta / p->dist) : 0,
 								p->dist);
 					} // <--- column
 				} // <--- row

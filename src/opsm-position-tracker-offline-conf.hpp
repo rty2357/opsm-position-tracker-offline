@@ -134,9 +134,15 @@ namespace ObservationProbabilityScanMatching {
 
 
 		// number of scan data for first map building
-		static const gnd::Conf::parameter<double> ConfIni_PosGridSize = {
-				"correction-map-pos-grid",
-				0.5,	// [m]
+		static const gnd::Conf::parameter<double> ConfIni_PosGridSizeX = {
+				"correction-map-pos-grid-x",
+				1.0,	// [m]
+		};
+
+		// number of scan data for first map building
+		static const gnd::Conf::parameter<double> ConfIni_PosGridSizeY = {
+				"correction-map-pos-grid-y",
+				1.0,	// [m]
 		};
 
 		// number of scan data for first map building
@@ -219,7 +225,8 @@ namespace ObservationProbabilityScanMatching {
 			gnd::Conf::parameter<bool>				debug_viewer;		///< debug viewer
 			gnd::Conf::parameter<bool>				debug_show;			///< debug show mode
 
-			gnd::Conf::parameter<double>			pos_gridsize;		///< road map position size
+			gnd::Conf::parameter<double>			pos_gridsizex;		///< road map position size
+			gnd::Conf::parameter<double>			pos_gridsizey;		///< road map position size
 			gnd::Conf::parameter<int>				ang_rsl;			///< road map angular resolution
 		};
 		typedef struct proc_configuration configure_parameters;
@@ -268,7 +275,8 @@ namespace ObservationProbabilityScanMatching {
 			::memcpy(&conf->debug_viewer,		&ConfIni_DebugViewer,			sizeof(ConfIni_DebugViewer) );
 			::memcpy(&conf->debug_show,			&ConfIni_DebugShowMode,			sizeof(ConfIni_DebugShowMode) );
 
-			::memcpy(&conf->pos_gridsize,		&ConfIni_PosGridSize,			sizeof(ConfIni_PosGridSize) );
+			::memcpy(&conf->pos_gridsizex,		&ConfIni_PosGridSizeX,			sizeof(ConfIni_PosGridSizeX) );
+			::memcpy(&conf->pos_gridsizey,		&ConfIni_PosGridSizeY,			sizeof(ConfIni_PosGridSizeY) );
 			::memcpy(&conf->ang_rsl,			&ConfIni_AngReslution,			sizeof(ConfIni_AngReslution) );
 			return 0;
 		}
@@ -299,7 +307,8 @@ namespace ObservationProbabilityScanMatching {
 			gnd::Conf::get_parameter( src, &dest->ndt );
 			gnd::Conf::get_parameter( src, &dest->debug_viewer );
 			gnd::Conf::get_parameter( src, &dest->debug_show );
-			gnd::Conf::get_parameter( src, &dest->pos_gridsize );
+			gnd::Conf::get_parameter( src, &dest->pos_gridsizex );
+			gnd::Conf::get_parameter( src, &dest->pos_gridsizey );
 			gnd::Conf::get_parameter( src, &dest->ang_rsl );
 
 			dest->rest_orient.value = gnd_deg2rad(dest->rest_orient.value);
@@ -335,7 +344,8 @@ namespace ObservationProbabilityScanMatching {
 				gnd::Conf::set_parameter(dest, &src->debug_viewer );
 				gnd::Conf::set_parameter(dest, &src->debug_show );
 
-				gnd::Conf::set_parameter(dest, &src->pos_gridsize );
+				gnd::Conf::set_parameter(dest, &src->pos_gridsizex );
+				gnd::Conf::set_parameter(dest, &src->pos_gridsizey );
 
 				src->rest_orient.value = gnd_rad2deg(src->rest_orient.value);
 				gnd::Conf::set_parameter(dest, &src->ang_rsl );
