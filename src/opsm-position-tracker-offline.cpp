@@ -16,6 +16,7 @@
 
 #include "opsm-position-tracker-offline-opt.hpp"
 #include "opsm-position-tracker-offline-viewer.hpp"
+#include "opsm-position-tracker-offline-cui.hpp"
 
 #include "gnd-coord-tree.hpp"
 #include "gnd-matrix-coordinate.hpp"
@@ -23,24 +24,11 @@
 
 #include "gnd-observation-probability.hpp"
 #include "gnd-odometry-correction.hpp"
-#include "gnd-cui.hpp"
 #include "gnd-gridmap.hpp"
 #include "gnd-shutoff.hpp"
 #include "gnd-time.hpp"
 #include "gnd-bmp.hpp"
 
-
-static const struct gnd::CUI::command cui_cmd[] = {
-		{"Quit",					'Q',	"localizer shut-off"},
-		{"help",					'h',	"show help"},
-		{"show",					's',	"state show mode"},
-		{"freq",					'f',	"change cycle (frequency)"},
-		{"cycle",					'c',	"change cycle (cycle)"},
-		{"start",					't',	"start (end stand-by mode)"},
-		{"stand-by",				'B',	"stand-by mode"},
-		{"viewer",					'v',	"viewer on / off"},
-		{"", '\0'}
-};
 
 static const double ShowCycle = gnd_sec2time(1.0);
 static const double ClockCycle = gnd_sec2time(1.0) / 60.0 ;
@@ -64,7 +52,7 @@ int main(int argc, char* argv[]) {
 		coordid_sns = -1,						// sensor coordinate node id
 		coordid_odm = -1;						// odometry coordinate node id
 
-	gnd::cui gcui;								// cui class
+	gnd::cui_reader gcui;								// cui class
 
 	gnd::odometry::cmap cmap;
 
@@ -346,7 +334,7 @@ int main(int argc, char* argv[]) {
 
 
 		// set cui command
-		gcui.set_command(cui_cmd, sizeof(cui_cmd) / sizeof(cui_cmd[0]));
+		gcui.set_command(OPSMPosTrack::cui_cmd, sizeof(OPSMPosTrack::cui_cmd) / sizeof(OPSMPosTrack::cui_cmd[0]));
 
 
 		// fin of initialization
