@@ -1,10 +1,21 @@
 
-_O_OPTION_	:=-O3
+#optimize option
+_OPT_OPTION_	:=-O3
 
-_W_OPTION_	:=-Wall
+#warning option
+_WRN_OPTION_	:=-Wall
 
-_g_OPTION_	:=
+#debug option
+_DBG_OPTION_	:=
 
-_l_OPTION_	:=$(patsubst %,-l%,$(LIB_LIST))
+#preprocessor option
+_PRE_OPTION_	:=-DNDEBUG
 
-_I_OPTION_	:=$(patsubst %,-I$(WORKSPACE)%,$(HEADER_DIR_LIST))
+#linker option
+_LNK_OPTION_	:=$(patsubst %,-l%,$(LIBS))
+
+#header directory option
+_HDIR_OPTION_	:=$(patsubst %,-I$(WORKSPACE)%,$(HEADER_DIR_LIST))
+
+#library directory option
+_LDIR_OPTION_	:= $(patsubst %,-L$(WORKSPACE)%,$(LIB_DIR_LIST))

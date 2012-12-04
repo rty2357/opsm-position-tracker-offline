@@ -1,4 +1,4 @@
 
-_OBJS_		:=$(patsubst %.cpp,%.o,$(SRCS))
+OBJS	:=$(patsubst %.cpp,%.o,$(SRCS))
 
-LIB_LIST	:=ssm GLU GL glut
+LIBS	:=ssm GLU GL glut
