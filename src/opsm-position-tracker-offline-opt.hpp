@@ -67,7 +67,7 @@ namespace ObservationProbabilityScanMatching {
 				{ConfIni_ScanMatchingMapDir.token,	required_argument,	0,	'm'},
 				{ConfIni_LaserScannerLogName.token,	required_argument,	0,	'S'},
 				{ConfIni_OdometryLogName.token,		required_argument,	0,	'O'},
-				{ConfIni_Decimate.token,			required_argument,	0,	'd'},
+				{ConfIni_Culling.token,				required_argument,	0,	'd'},
 				{ConfIni_Cycle.token,				required_argument,	0,	'c'},
 				{ConfIni_SLAM.token,				no_argument,		0,	'l'},
 				{ConfIni_NDT.token,					no_argument,		0,	'N'},
@@ -115,7 +115,7 @@ namespace ObservationProbabilityScanMatching {
 				case 'O': ::strcpy( pconf->odm_logname.value, optarg);		break;
 
 				// data decimate threshold
-				case 'd': pconf->decimate.value = ::atoi(optarg);			break;
+				case 'd': pconf->culling.value = ::atoi(optarg);			break;
 
 
 				case 'c':
