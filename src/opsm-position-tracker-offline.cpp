@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
 				::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to load scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 			}
 			else if( !pconf.ndt.value){
-				if( gnd::opsm::build_map(&smmap, &cnt_smmap, 10, 1, 0.5) < 0) {
+				if( gnd::opsm::build_map(&smmap, &cnt_smmap, 1.0e-3) < 0) {
 					::proc_shutoff();
 					::fprintf(stderr, "  ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: fail to build scan matching map \"\x1b[4m%s\x1b[0m\"\n", pconf.smmapdir.value);
 				}
@@ -223,7 +223,6 @@ int main(int argc, char* argv[]) {
 				// shut off
 				::proc_shutoff();
 				::fprintf(stderr, " ... \x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: missing log file operand\n" );
-				::fprintf(stderr, "     please show help, ./%s -S <sokuiki.log> -O <odometry.log>\n", OPSMPosTrack::proc_name );
 			}
 			else {
 				::fprintf(stderr, "    File \"\x1b[4m%s\x1b[0m\"\n", pconf.odm_logname.value);
@@ -403,7 +402,7 @@ int main(int argc, char* argv[]) {
 
 		// ---> memory allocate counting map
 		if( !cnt_smmap.plane[0].is_allocate() ){
-			gnd::opsm::init_counting_map(&cnt_smmap, 0.5, 10);
+			gnd::opsm::init_counting_map(&cnt_smmap, 1.0, 10);
 		} // <--- memory allocate counting map
 
 
@@ -550,7 +549,7 @@ int main(int argc, char* argv[]) {
 			} // <--- map initialization loop
 
 			// ---> map build
-			if( !pconf.ndt.value && gnd::opsm::build_map(&smmap, &cnt_smmap, 10, 1.0e-3, 0) < 0 ){
+			if( !pconf.ndt.value && gnd::opsm::build_map(&smmap, &cnt_smmap, 1.0e-3) < 0 ){
 				::fprintf(stderr, "\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid map property\n");
 			}
 			else if( pconf.ndt.value && gnd::opsm::build_ndt_map(&smmap, &cnt_smmap ) < 0 ){
@@ -1012,7 +1011,7 @@ int main(int argc, char* argv[]) {
 										gnd::opsm::update_ndt_map(&cnt_smmap, &smmap, reflect_cgl[0][0], reflect_cgl[1][0], gnd_mm2dist(1));
 									}
 									else {
-										gnd::opsm::update_map(&cnt_smmap, &smmap, reflect_cgl[0][0], reflect_cgl[1][0], gnd_m2dist(10), gnd::opsm::ErrorMargin, 0.5);
+										gnd::opsm::update_map(&cnt_smmap, &smmap, reflect_cgl[0][0], reflect_cgl[1][0], gnd_mm2dist(1) );
 									}
 								}
 								else {
@@ -1040,7 +1039,7 @@ int main(int argc, char* argv[]) {
 						}
 						else {
 							if( !pconf.ndt.value ){
-								if( gnd::opsm::build_map(&smmap, &cnt_smmap, 10, gnd::opsm::ErrorMargin, 0) < 0 ){
+								if( gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_mm2dist(1)) < 0 ){
 									::fprintf(stderr, "\x1b[1m\x1b[31mERROR\x1b[39m\x1b[0m: invalid map property\n");
 								}
 							}
@@ -1079,7 +1078,7 @@ int main(int argc, char* argv[]) {
 				gnd::opsm::build_ndt_map(&smmap, &cnt_smmap );
 			}
 			else {
-				gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_m2dist(30), DBL_EPSILON, 1.0);
+				gnd::opsm::build_map(&smmap, &cnt_smmap, gnd_mm2dist(1));
 			} // <--- build map
 
 			{ // ---> write intermediate file
@@ -1096,7 +1095,7 @@ int main(int argc, char* argv[]) {
 
 			// bmp file building
 			::fprintf(stderr, " => bmp map building\n");
-			gnd::opsm::build_bmp32(&bmp, &smmap, gnd_m2dist( 1.0 / 8) );
+			gnd::opsm::build_bmp32(&bmp, &smmap, gnd_m2dist( 1.0 / 20) );
 
 			{ // ---> file out
 				{ // ---> bmp
@@ -1131,7 +1130,7 @@ int main(int argc, char* argv[]) {
 
 			// bmp file building
 			::fprintf(stderr, " => bmp map building\n");
-			gnd::opsm::build_bmp8(&bmp8, &smmap, gnd_m2dist( 1.0 / 8) );
+			gnd::opsm::build_bmp8(&bmp8, &smmap, gnd_m2dist( 1.0 / 20) );
 
 			{ // ---> file out
 				{ // ---> bmp

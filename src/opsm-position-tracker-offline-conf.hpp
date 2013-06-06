@@ -27,7 +27,7 @@
 // ---> constant definition
 namespace ObservationProbabilityScanMatching {
 	namespace PositionTracker {
-		static const char proc_name[] = "opsm-position-tracker";
+		static const char proc_name[] = "opsm-position-tracker-offline";
 
 		// map-file
 		static const gnd::Conf::parameter_array<char, 512> ConfIni_ScanMatchingMapDir = {
