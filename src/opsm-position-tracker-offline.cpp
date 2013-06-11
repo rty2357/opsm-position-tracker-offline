@@ -34,8 +34,8 @@ static const double ShowCycle = gnd_sec2time(1.0);
 static const double ClockCycle = gnd_sec2time(1.0) / 60.0 ;
 
 int main(int argc, char* argv[]) {
-	gnd::opsm::optimizer_basic	*optimizer = 0;	// optimizer class
-	void 						*starting = 0;	// optimization starting value
+	gnd::opsm::optimize_basic	*optimizer = 0;	// optimizer class
+	void 						*opt_ini = 0;	// optimization starting value
 
 	gnd::opsm::cmap_t			cnt_smmap;		// observed probability counting map
 	gnd::opsm::map_t			smmap;			// observed probability map
@@ -147,27 +147,27 @@ int main(int argc, char* argv[]) {
 			::fprintf(stderr, " => create optimizer class \"\x1b[4m%s\x1b[0m\"\n", pconf.optimizer.value);
 			if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptNewton) ){
 				optimizer = new gnd::opsm::newton;
-				optimizer->create_starting_value(&starting);
+				optimizer->initial_parameter_create(&opt_ini);
 				optimizer->set_converge_threshold(pconf.converge_dist.value, pconf.converge_orient.value );
 				::fprintf(stderr, " ... newton's method \x1b[1mOK\x1b[0m\n");
 			}
 			else if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptQMC)){
-				gnd::opsm::qmc::starting_value *p;
+				gnd::opsm::qmc::initial_parameter *p;
 				optimizer = new gnd::opsm::qmc;
-				optimizer->create_starting_value(&starting);
-				p = static_cast<gnd::opsm::qmc::starting_value*>(starting);
+				optimizer->initial_parameter_create(&opt_ini);
+				p = static_cast<gnd::opsm::qmc::initial_parameter*>(opt_ini);
 				p->n = 2;
-				starting = static_cast<void*>(p);
+				opt_ini = static_cast<void*>(p);
 				optimizer->set_converge_threshold(pconf.converge_dist.value, pconf.converge_orient.value );
 				::fprintf(stderr, "  ... quasi monte calro method \x1b[1mOK\x1b[0m\n");
 			}
 			else if( !::strcmp(pconf.optimizer.value, OPSMPosTrack::OptQMC2Newton)){
-				gnd::opsm::hybrid_q2n::starting_value *p;
+				gnd::opsm::hybrid_q2n::initial_parameter *p;
 				optimizer = new gnd::opsm::hybrid_q2n;
-				optimizer->create_starting_value(&starting);
-				p = static_cast<gnd::opsm::hybrid_q2n::starting_value*>(starting);
+				optimizer->initial_parameter_create(&opt_ini);
+				p = static_cast<gnd::opsm::hybrid_q2n::initial_parameter*>(opt_ini);
 				p->n = 2;
-				starting = static_cast<void*>(p);
+				opt_ini = static_cast<void*>(p);
 				optimizer->set_converge_threshold(pconf.converge_dist.value, pconf.converge_orient.value );
 				::fprintf(stderr, "  ... quasi monte calro and newton hybrid \x1b[1mOK\x1b[0m\n");
 			}
@@ -783,14 +783,14 @@ int main(int argc, char* argv[]) {
 						pos.y = pos_odmest[1][0];
 						pos.theta += move_est.theta;
 
-						optimizer->set_starting_value( starting, pos.x, pos.y, pos.theta );
+						optimizer->initial_parameter_set_position( opt_ini, pos.x, pos.y, pos.theta );
 					} // <--- add movement estimation
 				}  // <--- 1. compute position estimation from odometry
 
 
 
 				// ---> 2. set position estimation by odometry to optimization starting value
-				optimizer->begin(starting);
+				optimizer->begin(opt_ini);
 
 
 				gnd::matrix::set_zero(&move_opt);
@@ -838,7 +838,7 @@ int main(int argc, char* argv[]) {
 						} // <--- compute laser scanner reading position on robot coordinate
 
 						// data entry
-						optimizer->entry( reflect_crbt[0][0] , reflect_crbt[1][0] );
+						optimizer->set_scan_point( reflect_crbt[0][0] , reflect_crbt[1][0] );
 						// <--- entry laser scanner reflection
 					} // <--- scanning loop for sokuikiraw-data
 
@@ -1063,7 +1063,7 @@ int main(int argc, char* argv[]) {
 
 		if(fp) ::fclose(fp);
 
-		optimizer->delete_starting_value(&starting);
+		optimizer->initial_parameter_delete(&opt_ini);
 		delete optimizer;
 
 		// slam
