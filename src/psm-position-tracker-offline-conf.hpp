@@ -1,22 +1,22 @@
 /*
- * observation-probability-position-tracker-offline-conf.hpp
+ * psm-position-tracker-offline-conf.hpp
  *
  *  Created on: 2011/12/22
  *      Author: tyamada
  */
 
-#ifndef OBSERVATION_PROBABILITY_POSITION_TRACKER_OFFLINE_CONF_HPP_
-#define OBSERVATION_PROBABILITY_POSITION_TRACKER_OFFLINE_CONF_HPP_
+#ifndef PSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
+#define PSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
 
 #include <ssmtype/spur-odometry.h>
 #include "ssm-laser.hpp"
 
-#include "gnd-opsm.hpp"
+#include "gnd-psm.hpp"
 #include "gnd-config-file.hpp"
 #include "gnd-lib-error.h"
 
-#ifndef OPSMPosTrack
-#define OPSMPosTrack ObservationProbabilityScanMatching::PositionTracker
+#ifndef psm_pt
+#define psm_pt psm::position_tracker
 #endif
 
 #define __OPTIMIZER_NEWTON__		"newton"
@@ -25,9 +25,9 @@
 
 
 // ---> constant definition
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
-		static const char proc_name[] = "opsm-position-tracker-offline";
+namespace psm {
+	namespace position_tracker {
+		static const char proc_name[] = "psm-position-tracker-offline";
 
 		// map-file
 		static const gnd::conf::parameter_array<char, 512> ConfIni_ScanMatchingMapDir = {
@@ -206,14 +206,14 @@ namespace ObservationProbabilityScanMatching {
 				8,	// [m]
 		};
 
-	} // <--- namespace ObservationProbabilityScanMatching
-} // <--- namespace PositionTracker
+	} // <--- namespace psm
+} // <--- namespace position_tracker
 // <--- constant definition
 
 
 // ---> type declaration
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
+namespace psm {
+	namespace position_tracker {
 		struct proc_configuration;
 		typedef struct proc_configuration proc_configuration;
 	}
@@ -222,8 +222,8 @@ namespace ObservationProbabilityScanMatching {
 
 
 // ---> function declaration
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
+namespace psm {
+	namespace position_tracker {
 		/*
 		 * @brief initialize configure to default parameter
 		 */
@@ -254,8 +254,8 @@ namespace ObservationProbabilityScanMatching {
 
 
 // ---> type definition
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
+namespace psm {
+	namespace position_tracker {
 		/**
 		 * \brief particle localizer configure
 		 */
@@ -310,8 +310,8 @@ namespace ObservationProbabilityScanMatching {
 
 
 // ---> function definition
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
+namespace psm {
+	namespace position_tracker {
 
 		/**
 		 * @brief initialize configure
@@ -493,8 +493,8 @@ namespace ObservationProbabilityScanMatching {
         }
 
 
-	} // namespace PositionTracker
-}; // namespace ObservationProbabilityScanMatching
+	} // namespace position_tracker
+}; // namespace psm
 // <--- function definition
 
 
@@ -502,4 +502,4 @@ namespace ObservationProbabilityScanMatching {
 #undef __OPTIMIZER_QMC__
 #undef __OPTIMIZER_QMC2NEWTON__
 
-#endif /* OBSERVATION_PROBABILITY_POSITION_TRACKER_CONF_HPP_ */
+#endif /* PSM_POSITION_TRACKER_CONF_HPP_ */

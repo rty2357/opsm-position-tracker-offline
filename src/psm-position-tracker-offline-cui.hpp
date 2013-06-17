@@ -1,17 +1,21 @@
 /*
- * opsm-position-tracker-offline-cui.hpp
+ * psm-position-tracker-offline-cui.hpp
  *
  *  Created on: 2012/11/14
  *      Author: tyamada
  */
 
-#ifndef OPSM_POSITION_TRACKER_OFFLINE_CUI_HPP_
-#define OPSM_POSITION_TRACKER_OFFLINE_CUI_HPP_
+#ifndef PSM_POSITION_TRACKER_OFFLINE_CUI_HPP_
+#define PSM_POSITION_TRACKER_OFFLINE_CUI_HPP_
 
 #include "gnd-cui.hpp"
 
-namespace ObservationProbabilityScanMatching {
-	namespace PositionTracker {
+#ifndef psm_pt
+#define psm_pt psm::position_tracker
+#endif
+
+namespace psm {
+	namespace position_tracker {
 
 		static const gnd::cui_command cui_cmd[] = {
 				{"Quit",					'Q',	"localizer shut-off"},
