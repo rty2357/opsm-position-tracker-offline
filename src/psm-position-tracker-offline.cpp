@@ -15,7 +15,6 @@
 #include "ssm-laser.hpp"
 
 #include "psm-position-tracker-offline-opt.hpp"
-#include "psm-position-tracker-offline-viewer.hpp"
 #include "psm-position-tracker-offline-cui.hpp"
 
 #include "gnd-coord-tree.hpp"
@@ -290,27 +289,6 @@ int main(int argc, char* argv[]) {
 			}
 		} // <--- open ssm sokuiki raw data
 
-
-
-		// ---> viewer initialization
-		if ( !::is_proc_shutoff() ) {
-			gnd::gl::initialize(&argc, argv);
-
-			gnd::gl::window.m = GLUT_DEPTH | GLUT_RGBA | GLUT_DOUBLE;
-			gnd::gl::window.w = 400;
-			gnd::gl::window.h = 300;
-
-			gnd::gl::window.field = 10;
-			::strcpy( gnd::gl::window.name, "viewer" );
-
-			gnd::gl::window.df = psm_pt::viewer::display;
-			gnd::gl::window.idle = psm_pt::viewer::idle;
-			gnd::gl::window.mf = psm_pt::viewer::mouse;
-			gnd::gl::window.mmf = psm_pt::viewer::motion;
-			gnd::gl::window.reshf = psm_pt::viewer::reshape;
-
-			if ( pconf.debug_viewer.value ) gnd::gl::begin();
-		} // <--- viewer initialization
 
 
 		if ( !::is_proc_shutoff() ) {
@@ -647,26 +625,6 @@ int main(int argc, char* argv[]) {
 							::fprintf(stderr, "   stand-by mode\n");
 							cuito = -1;
 						} break;
-
-						case 'v': {
-							if ( !pconf.debug_viewer.value ) {
-								::fprintf(stderr, "   ... create window\n");
-								if( !gnd::gl::is_thread_fin() ) {
-									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not create because of thread is busy\n");
-								}
-								else if( gnd::gl::begin() < 0){
-									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not create because of thread is busy\n");
-								}
-								pconf.debug_viewer.value = true;
-							}
-							else if ( pconf.debug_viewer.value ) {
-								::fprintf(stderr, "   ... delete\n");
-								if( gnd::gl::end() < 0 ) {
-									::fprintf(stderr, "   ... \x1b[31m\x1b[1mFial\x1b[0m\x1b[39m can'not delete window\n");
-								}
-								pconf.debug_viewer.value = false;
-							}
-						} break;
 						}
 					} // <--- cui command operation
 					::fprintf(stderr, "  > ");
@@ -946,34 +904,10 @@ int main(int argc, char* argv[]) {
 						gnd::matrix::fixed<4,1> reflect_cgl;
 						gnd::matrix::fixed<2,1> reflect_prevent;
 
-						psm_pt::viewer::robot_pos.wait();
-						{ // ---> set robot position
-							psm_pt::viewer::robot_pos.var.x = pos.x;
-							psm_pt::viewer::robot_pos.var.y = pos.y;
-							psm_pt::viewer::robot_pos.var.t = pos.theta;
-						} // <--- set robot position
-						psm_pt::viewer::robot_pos.post();
-
-						psm_pt::viewer::scan_cur.wait();
-						{ // set view point data
-							psm_pt::viewer::scan_2prev.wait();
-							psm_pt::viewer::scan_prev.wait();
-							// shift prev data
-							psm_pt::viewer::scan_2prev.var.clear();
-							if( psm_pt::viewer::scan_prev.var.begin() )
-								psm_pt::viewer::scan_2prev.var.copy(psm_pt::viewer::scan_prev.var.begin(), psm_pt::viewer::scan_prev.var.size() );
-							psm_pt::viewer::scan_prev.var.clear();
-							if( psm_pt::viewer::scan_cur.var.begin() )
-								psm_pt::viewer::scan_prev.var.copy(psm_pt::viewer::scan_cur.var.begin(), psm_pt::viewer::scan_cur.var.size() );
-							psm_pt::viewer::scan_prev.post();
-							psm_pt::viewer::scan_2prev.post();
-						}
-						psm_pt::viewer::scan_cur.var.clear();
 						// ---> scanning loop of laser scanner reading
 						for(size_t i = 0; i < sokuikiraw.numPoints(); i++){
 							gnd::matrix::fixed<3,1> ws3x1;
 							gnd::matrix::fixed<3,3> ws3x3;
-							gnd::gl::point p;
 
 							// if range data is null because of no reflection
 							if( sokuikiraw[i].status == ssm::laser::STATUS_NO_REFLECTION)	continue;
@@ -1019,14 +953,7 @@ int main(int argc, char* argv[]) {
 								time_premap = ssmlog_sokuikiraw.time();
 								pos_premap = pos;
 							} // <--- enter laser scanner reading to map
-
-							// enter viewer data
-							p.x = reflect_cgl[0][0];
-							p.y = reflect_cgl[1][0];
-							p.z = 0.0;
-							psm_pt::viewer::scan_cur.var.push_back(&p);
 						} // <--- scanning loop of laser scanner reading
-						psm_pt::viewer::scan_cur.post();
 
 					} // <--- scanning loop for sokuikiraw-data
 
@@ -1159,9 +1086,6 @@ int main(int argc, char* argv[]) {
 					fclose(fp);
 				} // --->  origin
 			} // <--- fileout
-
-			// viwer free
-			gnd::gl::finalize();
 
 		}
 
