@@ -3,7 +3,7 @@
 LAUNCHER		:=launcher
 
 #lanch option
-LAUNCH_OPTION	:=-g psm-pos-tracker.conf
+LAUNCH_OPTION	:=-g psm-position-tracker-offline.conf
 
 #launch command
 LAUNCH_CMD		:=./$(RELEASE_DIR)$(TARGET) $(LAUNCH_OPTION) "$$"@
