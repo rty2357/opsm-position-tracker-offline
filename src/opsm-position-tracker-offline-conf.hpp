@@ -1,22 +1,22 @@
 /*
- * psm-position-tracker-offline-conf.hpp
+ * opsm-position-tracker-offline-conf.hpp
  *
  *  Created on: 2011/12/22
  *      Author: tyamada
  */
 
-#ifndef PSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
-#define PSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
+#ifndef OPSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
+#define OPSM_POSITION_TRACKER_OFFLINE_CONF_HPP_
 
 #include <ssmtype/spur-odometry.h>
 #include "ssm-laser.hpp"
 
-#include "gnd-psm.hpp"
+#include "gnd-opsm.hpp"
 #include "gnd-config-file.hpp"
 #include "gnd-lib-error.h"
 
-#ifndef psm_pt
-#define psm_pt psm::position_tracker
+#ifndef opsm_pt
+#define opsm_pt opsm::position_tracker
 #endif
 
 #define __OPTIMIZER_NEWTON__		"newton"
@@ -26,13 +26,13 @@
 
 
 // ---> constant definition
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
-		static const char proc_name[] = "psm-position-tracker-offline";
+		static const char proc_name[] = "opsm-position-tracker-offline";
 
 		// map-file
 		static const gnd::conf::parameter_array<char, 256> ConfIni_ScanMatchingMapDir = {
-				"init-psm-map",
+				"init-opsm-map",
 				"",		// map file directory
 				"input scan matching map directory path (optional argument)"
 		};
@@ -177,7 +177,7 @@ namespace psm {
 		static const gnd::conf::parameter<bool> ConfIni_NDT = {
 				"ndt",
 				false,
-				"scan matching evaluation function (ndt or psm)"
+				"scan matching evaluation function (ndt or opsm)"
 		};
 
 
@@ -189,10 +189,10 @@ namespace psm {
 		};
 
 		//
-		static const gnd::conf::parameter_array<char, 256> ConfIni_PSMMap = {
-				"psm-map",
-				"psm-map",		// path name
-				"psm map output directory"
+		static const gnd::conf::parameter_array<char, 256> ConfIni_OPSMMap = {
+				"opsm-map",
+				"opsm-map",		// path name
+				"opsm map output directory"
 		};
 
 		// number of scan data for first map building
@@ -259,13 +259,13 @@ namespace psm {
 				false
 		};
 
-	} // <--- namespace psm
+	} // <--- namespace opsm
 } // <--- namespace position_tracker
 // <--- constant definition
 
 
 // ---> type declaration
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
 		struct proc_configuration;
 		typedef struct proc_configuration proc_configuration;
@@ -275,7 +275,7 @@ namespace psm {
 
 
 // ---> function declaration
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
 		/*
 		 * @brief initialize configure to default parameter
@@ -307,7 +307,7 @@ namespace psm {
 
 
 // ---> type definition
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
 		/**
 		 * \brief particle localizer configure
@@ -315,7 +315,7 @@ namespace psm {
 		struct proc_configuration {
 			proc_configuration();
 
-			gnd::conf::parameter_array<char, 256>	init_psm_map;			///< scan matching map directory path
+			gnd::conf::parameter_array<char, 256>	init_opsm_map;			///< scan matching map directory path
 			gnd::conf::parameter_array<char, 256>	cmap;				///< correction map path
 			gnd::conf::parameter_array<char, 256>	odm_logname;		///< odometry position estimation ssm-name
 			gnd::conf::parameter_array<char, 256>	ls_logname;			///< laser scanner data ssm-name
@@ -341,8 +341,8 @@ namespace psm {
 			gnd::conf::parameter<bool>				ndt;				///< ndt mode
 			gnd::conf::parameter<bool>				cui_show;			///< debug show mode
 
-			gnd::conf::parameter_array<char, 256>	psm_map;			///< psm map directory
-			gnd::conf::parameter<bool>				bmp;				///< psm map (bmp)
+			gnd::conf::parameter_array<char, 256>	opsm_map;			///< opsm map directory
+			gnd::conf::parameter<bool>				bmp;				///< opsm map (bmp)
 
 			gnd::conf::parameter<double>			pos_gridsizex;		///< road map position size
 			gnd::conf::parameter<double>			pos_gridsizey;		///< road map position size
@@ -372,7 +372,7 @@ namespace psm {
 
 
 // ---> function definition
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
 
 		/**
@@ -382,7 +382,7 @@ namespace psm {
 		int proc_conf_initialize(proc_configuration *conf){
 			gnd_assert(!conf, -1, "invalid null pointer");
 
-			::memcpy(&conf->init_psm_map,			&ConfIni_ScanMatchingMapDir,	sizeof(ConfIni_ScanMatchingMapDir) );
+			::memcpy(&conf->init_opsm_map,			&ConfIni_ScanMatchingMapDir,	sizeof(ConfIni_ScanMatchingMapDir) );
 			::memcpy(&conf->cmap,				&ConfIni_CorrectionMapPath,		sizeof(ConfIni_CorrectionMapPath) );
 			::memcpy(&conf->odm_logname,		&ConfIni_OdometryLogName,		sizeof(ConfIni_OdometryLogName) );
 			::memcpy(&conf->ls_logname,			&ConfIni_LaserScannerLogName,	sizeof(ConfIni_LaserScannerLogName) );
@@ -405,7 +405,7 @@ namespace psm {
 			::memcpy(&conf->ndt,				&ConfIni_NDT,					sizeof(ConfIni_NDT) );
 			::memcpy(&conf->cui_show,			&ConfIni_DebugShowMode,			sizeof(ConfIni_DebugShowMode) );
 
-			::memcpy(&conf->psm_map,			&ConfIni_PSMMap,				sizeof(ConfIni_PSMMap) );
+			::memcpy(&conf->opsm_map,			&ConfIni_OPSMMap,				sizeof(ConfIni_OPSMMap) );
 			::memcpy(&conf->bmp,				&ConfIni_BMP,					sizeof(ConfIni_BMP) );
 
 			::memcpy(&conf->pos_gridsizex,		&ConfIni_PosGridSizeX,			sizeof(ConfIni_PosGridSizeX) );
@@ -432,7 +432,7 @@ namespace psm {
 			gnd_assert(!src, -1, "invalid null pointer");
 			gnd_assert(!dest, -1, "invalid null pointer");
 
-			gnd::conf::get_parameter( src, &dest->init_psm_map );
+			gnd::conf::get_parameter( src, &dest->init_opsm_map );
 			gnd::conf::get_parameter( src, &dest->cmap );
 			gnd::conf::get_parameter( src, &dest->culling );
 			gnd::conf::get_parameter( src, &dest->cycle );
@@ -457,7 +457,7 @@ namespace psm {
 			gnd::conf::get_parameter( src, &dest->ndt );
 			gnd::conf::get_parameter( src, &dest->cui_show );
 
-			gnd::conf::get_parameter( src, &dest->psm_map );
+			gnd::conf::get_parameter( src, &dest->opsm_map );
 			gnd::conf::get_parameter( src, &dest->bmp );
 
 			gnd::conf::get_parameter( src, &dest->pos_gridsizex );
@@ -523,7 +523,7 @@ namespace psm {
 
 				gnd::conf::set_parameter(dest, &src->output_dir );
 
-				gnd::conf::set_parameter(dest, &src->psm_map );
+				gnd::conf::set_parameter(dest, &src->opsm_map );
 				gnd::conf::set_parameter(dest, &src->bmp );
 
 				gnd::conf::set_parameter(dest, &src->pos_gridsizex );
@@ -535,7 +535,7 @@ namespace psm {
 				gnd::conf::set_parameter(dest, &src->laserpoint_log );
 
 				gnd::conf::set_parameter(dest, &src->cui_show );
-				gnd::conf::set_parameter(dest, &src->init_psm_map);
+				gnd::conf::set_parameter(dest, &src->init_opsm_map);
 				gnd::conf::set_parameter(dest, &src->cmap );
 
 				return 0;
@@ -585,7 +585,7 @@ namespace psm {
 
 
 	} // namespace position_tracker
-}; // namespace psm
+}; // namespace opsm
 // <--- function definition
 
 
@@ -593,4 +593,4 @@ namespace psm {
 #undef __OPTIMIZER_QMC__
 #undef __OPTIMIZER_QMC2NEWTON__
 
-#endif /* PSM_POSITION_TRACKER_CONF_HPP_ */
+#endif /* OPSM_POSITION_TRACKER_CONF_HPP_ */

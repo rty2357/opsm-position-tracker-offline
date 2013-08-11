@@ -1,5 +1,5 @@
 /*
- * psm-position-tracker-offline-opt.hpp
+ * opsm-position-tracker-offline-opt.hpp
  *
  *  Created on: 2011/12/22
  *      Author: tyamada
@@ -16,13 +16,13 @@
 #include <ssmtype/spur-odometry.h>
 #include <ssmtype/pws-motor.h>
 
-#include "psm-position-tracker-offline-conf.hpp"
+#include "opsm-position-tracker-offline-conf.hpp"
 
-#ifndef psm_pt
-#define psm_pt psm::position_tracker
+#ifndef opsm_pt
+#define opsm_pt opsm::position_tracker
 #endif
 
-namespace psm {
+namespace opsm {
 	namespace position_tracker {
 
 		class options
@@ -103,12 +103,12 @@ namespace psm {
 
 				// write configure
 				case 'G': {
-					proc_conf_write( optarg ? optarg : "psm-position-tracker-offline.conf", pconf);
-					::fprintf(stderr, " ... output configuration file \"\x1b[4m%s\x1b[0m\"\n", optarg ? optarg : "psm-position-tracker-offline.conf");
+					proc_conf_write( optarg ? optarg : "opsm-position-tracker-offline.conf", pconf);
+					::fprintf(stderr, " ... output configuration file \"\x1b[4m%s\x1b[0m\"\n", optarg ? optarg : "opsm-position-tracker-offline.conf");
 				} return RWriteConf;
 
 				// entry map file directory
-				case 'm': ::strcpy(pconf->init_psm_map.value, optarg);			break;
+				case 'm': ::strcpy(pconf->init_opsm_map.value, optarg);			break;
 				// entry sokuiki ssm-data id
 				case 'S': ::strcpy( pconf->ls_logname.value, optarg);		break;
 				// entry sokuiki ssm-data id
@@ -224,7 +224,7 @@ namespace psm {
 			return 0;
 		}
 	}; // namespace position_tracker
-}; // namespace psm
+}; // namespace opsm
 
 
 
